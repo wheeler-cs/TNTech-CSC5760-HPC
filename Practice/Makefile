@@ -1,5 +1,11 @@
 
+all: MPI
+
+# --- Kokkos Targets ---
+
 # --- MPI Targets ---
+
+MPI: MPI_ParallelAdd
 
 MPI_ParallelAdd: MPI_ParallelAdd.c
 	mpicc MPI_ParallelAdd.c -o MPI_ParallelAdd.out
@@ -8,6 +14,7 @@ MPI_ParallelAdd: MPI_ParallelAdd.c
 Run_MPI_ParallelAdd:
 	mpirun -np 4 ./MPI_ParallelAdd.out
 
+# --- OpenMP Targets ---
 
 # --- Utility Targets ---
 
