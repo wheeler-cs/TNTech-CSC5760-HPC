@@ -143,6 +143,7 @@ void sendVector(int dest, int start, int end, int vector[VECTOR_LEN])
     MPI_Waitall(3, reqs, MPI_STATUSES_IGNORE);
 }
 
+// NOTE: Merge sort is handled after every iteration of the tree reduction to sort the subvectors
 void recvVector(int src, int * start, int * end, int vector[VECTOR_LEN])
 {
     int i,
