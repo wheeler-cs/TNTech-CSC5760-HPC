@@ -7,6 +7,7 @@ FetchContent_Declare(
   Kokkos
   URL https://github.com/kokkos/kokkos/archive/refs/tags/5.0.0.zip
 )
+set(Kokkos_ENABLE_OPENMP ON)
 FetchContent_MakeAvailable(Kokkos)
 
 find_package(MPI REQUIRED)
@@ -20,3 +21,9 @@ target_link_libraries(problem2 Kokkos::kokkos)
 
 add_executable(problem3 problem3.cpp)
 target_link_libraries(problem3 Kokkos::kokkos)
+
+add_executable(problem4 problem4.cpp)
+target_link_libraries(problem4 Kokkos::kokkos)
+
+add_executable(problem5 problem5.cpp)
+target_link_libraries(problem5 Kokkos::kokkos)
