@@ -30,3 +30,6 @@ target_link_libraries(problem5 Kokkos::kokkos)
 
 add_executable(problem6 problem6.cpp)
 target_link_libraries(problem6 Kokkos::kokkos)
+
+add_executable(problem7 problem7.cpp)
+target_link_libraries(problem7 Kokkos::kokkos)
