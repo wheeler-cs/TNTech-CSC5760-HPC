@@ -6,5 +6,6 @@ into a corresponding subdirectory, and there is an accompanying `READMD.md` file
 that outlines how the source code files are structured.
 
 <ul>
-    <li> <a href="./Homework1/">Homework 1</a></li>
+    <li><a href="./Homework1/">Homework 1</a></li>
+    <li><a href="./Homework2/">Homework 2</a></li>
 </ul>
