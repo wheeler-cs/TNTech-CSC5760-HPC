@@ -121,14 +121,50 @@ void sendBucket(int dest, int * bucket, int bucketSize)
     MPI_Send(bucket,      bucketSize, MPI_INT, dest, TAG_VECTOR_DATA, MPI_COMM_WORLD);
 }
 
-void recvBucket(int src, int * bucket, int * bucketSize)
+void recvBucket(int src, int ** bucket, int * bucketSize)
 {
     // Perform blocking receives because we must know how much data we need to receive first
-    MPI_Recv(bucketSize, 1,           MPI_INT, src, TAG_VECTOR_LEN,  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    bucket = malloc((*bucketSize) * sizeof(int));
-    DBGPRINT("Allocating bucket of size %d\n", *bucketSize);
-    MPI_Recv(bucket,     *bucketSize, MPI_INT, src, TAG_VECTOR_DATA, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(bucketSize, 1, MPI_INT, src, TAG_VECTOR_LEN,  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    *bucket = (int *)malloc((*bucketSize) * sizeof(int));
+    MPI_Recv(*bucket, *bucketSize, MPI_INT, src, TAG_VECTOR_DATA, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     DBGPRINT("Received bucket data from root\n")
+}
+
+// Quick sort adapted from https://www.geeksforgeeks.org/dsa/quick-sort-algorithm/
+
+int qsPartition(int ** bucket, int low, int high)
+{
+    int pivot, i, j, temp;
+
+    pivot = (*bucket)[high];
+    i = low - 1;
+
+    for(j = low; j <= high - 1; j++)
+    {
+        if((*bucket)[j] < pivot)
+        {
+            i++;
+            temp = (*bucket)[i];
+            (*bucket)[i] = (*bucket)[j];
+            (*bucket)[j] = temp;
+        }
+    }
+
+    temp = (*bucket)[i + 1];
+    (*bucket)[i + 1] = (*bucket)[high];
+    (*bucket)[high] = temp;
+    return (i + 1);
+}
+
+void qsBucket(int ** bucket, int low, int high)
+{
+    int pivot;
+    if(low < high)
+    {
+        pivot = qsPartition(bucket, low, high);
+        qsBucket(bucket, low,       pivot - 1);
+        qsBucket(bucket, pivot + 1, high);
+    }
 }
 
 
@@ -178,14 +214,15 @@ int main(int argc, char ** argv)
     // Get bucket from root node
     else
     {
-        recvBucket(ROOT_NODE, bucketA, &bucketASize);
-        if(rank == 1)
-        {
-            printBucket(bucketA, bucketASize);
-        }
+        recvBucket(ROOT_NODE, &bucketA, &bucketASize);
     }
     
     // Perform sort on data
+    if(rank == 0)
+    {
+        qsBucket(&bucketA, 0, bucketASize - 1);
+        printBucket(bucketA, bucketASize);
+    }
 
     // Clean up
     free(bucketA);
