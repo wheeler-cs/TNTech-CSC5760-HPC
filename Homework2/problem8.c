@@ -14,7 +14,7 @@
 
 #include <mpi.h>
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define DBGPRINT(...) \
@@ -26,7 +26,7 @@
 #define DBGPRINT(...)
 #endif
 
-#define VECTOR_LEN   20
+#define VECTOR_LEN   10
 #define LOWER_BOUND   0
 #define UPPER_BOUND 100
 #define ROOT_NODE     0
@@ -172,7 +172,7 @@ int main(int argc, char ** argv)
 {
     // Operation variables
     int vector[VECTOR_LEN];
-    int rank, size,
+    int i, rank, size,
         pivotLow, pivotHigh,
         * bucketA, * bucketB, * bucketC,
         bucketASize, bucketBSize, bucketCSize;
@@ -189,7 +189,7 @@ int main(int argc, char ** argv)
     if(rank == ROOT_NODE)
     {
         // Setup and print initial vector to sort
-        printf("Input Vector: ");
+        printf("Input Vector:  ");
         populateVector(vector);
         printVector(vector);
 
@@ -217,11 +217,34 @@ int main(int argc, char ** argv)
         recvBucket(ROOT_NODE, &bucketA, &bucketASize);
     }
     
-    // Perform sort on data
-    if(rank == 0)
+    qsBucket(&bucketA, 0, bucketASize - 1);
+
+    // Send back sorted data
+    if(rank != ROOT_NODE)
     {
-        qsBucket(&bucketA, 0, bucketASize - 1);
-        printBucket(bucketA, bucketASize);
+        sendBucket(ROOT_NODE, bucketA, bucketASize);
+    }
+    // Recombine sorted data
+    else
+    {
+        recvBucket(1, &bucketB, &bucketBSize);
+        recvBucket(2, &bucketC, &bucketCSize);
+
+        for(i = 0; i < bucketASize; i++)
+        {
+            vector[i] = bucketA[i];
+        }
+        for(i = 0; i < bucketBSize; i++)
+        {
+            vector[i + bucketASize] = bucketB[i];
+        }
+        for(i = 0; i < bucketCSize; i++)
+        {
+            vector[i + bucketASize + bucketBSize] = bucketC[i];
+        }
+
+        printf("Output Vector: ");
+        printVector(vector);
     }
 
     // Clean up
