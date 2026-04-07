@@ -56,7 +56,7 @@ void printVector(int vector[VECTOR_LEN])
     printf("[ ");
     for(i = 0; i < VECTOR_LEN; i++)
     {
-        printf("%d ", vector[i]);
+        printf("%2d ", vector[i]);
     }
     printf("]\n");
 }
@@ -77,7 +77,7 @@ int * createBucket(int lowerBound, int upperBound, int inputVector[VECTOR_LEN], 
     bucket = NULL;
     *bucketSize = 0;
 
-    // Subdivide vector into buckets
+    // Sub-divide vector into buckets
     for(i = 0; i < VECTOR_LEN; i++)
     {
         if((inputVector[i] >= lowerBound) && (inputVector[i] < upperBound))
@@ -108,7 +108,7 @@ void printBucket(int * bucket, int bucketSize)
     printf("[ ");
     for(i = 0; i < bucketSize; i++)
     {
-        printf("%d ", bucket[i]);
+        printf("%2d ", *(bucket + i));
     }
     printf("]\n");
 }
@@ -126,8 +126,9 @@ void recvBucket(int src, int * bucket, int * bucketSize)
     // Perform blocking receives because we must know how much data we need to receive first
     MPI_Recv(bucketSize, 1,           MPI_INT, src, TAG_VECTOR_LEN,  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     bucket = malloc((*bucketSize) * sizeof(int));
-    DBGPRINT("Allocating bucket of size %d", *bucketSize);
+    DBGPRINT("Allocating bucket of size %d\n", *bucketSize);
     MPI_Recv(bucket,     *bucketSize, MPI_INT, src, TAG_VECTOR_DATA, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    DBGPRINT("Received bucket data from root\n")
 }
 
 
