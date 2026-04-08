@@ -40,3 +40,6 @@ target_link_libraries(problem8 MPI::MPI_C)
 
 add_executable(problem9 problem9.cpp)
 target_link_libraries(problem9 Kokkos::kokkos)
+
+add_executable(problem10 problem10.cpp)
+target_link_libraries(problem10 Kokkos::kokkos)
