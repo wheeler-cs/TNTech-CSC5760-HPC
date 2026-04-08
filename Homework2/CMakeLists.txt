@@ -34,5 +34,9 @@ target_link_libraries(problem6 Kokkos::kokkos)
 add_executable(problem7 problem7.cpp)
 target_link_libraries(problem7 Kokkos::kokkos)
 
+# === Graduate Problems ===
 add_executable(problem8 problem8.c)
 target_link_libraries(problem8 MPI::MPI_C)
+
+add_executable(problem9 problem9.cpp)
+target_link_libraries(problem9 Kokkos::kokkos)
