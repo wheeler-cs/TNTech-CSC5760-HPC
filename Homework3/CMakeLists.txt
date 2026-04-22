@@ -3,12 +3,15 @@ project(Homework3)
 
 # === Library Imports ===
 
-find_package(MPI_REQUIRED)
+find_package(MPI REQUIRED)
 
 
 # === Undergraduate Problems ===
 
 add_executable(problem0 problem0.c)
+
+add_executable(problem1 problem1.c)
+target_link_libraries(problem1 MPI::MPI_C)
 
 
 # === Graduate Problems ===
