@@ -22,4 +22,6 @@ set_target_properties(problem4 PROPERTIES
                       CUDA_STANDARD_REQUIRED ON
                       CUDA_ARCHITECTURES native)
 
+add_executable(problem5 problem5.c)
+
 # === Graduate Problems ===
