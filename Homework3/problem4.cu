@@ -1,3 +1,27 @@
+/**
+ * Develop a CUDA program to perform row-wise addition of a 1D vector to a 2D
+ * matrix. Initialize the host matrix A as a 3 x 3 grid with the following
+ * values:
+ * 
+ * | 130 147 115 |
+ * | 224 158 187 |
+ * |  54 158 120 |
+ * 
+ * and for vector B with values:
+ * 
+ * | 221  12 157 |
+ * 
+ * Transfer these to device memory and execute a parallel kernel where each
+ * thread calculates A[row][col] + B[col] using flat-index mapping
+ * (row * cols + col). Finally, copy the updated matrix back to the host to
+ * verify the result against the expected solution. Thre expected value of this
+ * updated matrix is:
+ * 
+ * | 351 159 272 |
+ * | 445 170 344 |
+ * | 275 170 277 |
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 
