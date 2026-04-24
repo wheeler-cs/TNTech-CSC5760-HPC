@@ -53,8 +53,6 @@ int randPopVector(int * vector, int vectorLen)
 {
     int i;
 
-    srand(time(NULL));
-
     for(i = 0; i < vectorLen; i++)
     {
         vector[i] = (rand() % UPPER_LIM) + 1;
@@ -168,15 +166,15 @@ int main(int argc, char ** argv)
 {
     // Program initialization
     int size, rank,
-        vector[M],
-        startIdx[P];
+        vector[M];
+    srand(time(NULL));
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     if(rank == ROOT_NODE)
     {
         randPopVector(vector, M);
-        printf("Input vector: ");
+        printf("Input horizontal vector: ");
         printVector(vector, M);
     }
 
@@ -217,11 +215,43 @@ int main(int argc, char ** argv)
         subvector.vector = calloc(subvector.vectorLen, sizeof(int));
     }
     MPI_Bcast(subvector.vector, subvector.vectorLen, MPI_INT, 0, columns);
+#ifndef DEBUG
     printSubvector(&subvector);
+#endif
+
+    // Prepare variables for vertical distribution
+    int yVectorCount,
+        yVector[M];
+    struct Subvector * ySubvectors,
+                       ySubvector;
+
+    // Distribute vector vertically
+    if(rank == ROOT_NODE)
+    {
+        randPopVector(yVector, M);
+        printf("Input vertical vector: ");
+        printVector(yVector, M);
+        ySubvectors = linearDistribute(yVector, M, columns, &yVectorCount);
+        sendSubvectors(ySubvectors, yVectorCount, columns);
+        // Copy vector with index 0 to root node
+        ySubvector.vectorLen = ySubvectors[0].vectorLen;
+        ySubvector.vector = calloc(ySubvector.vectorLen, sizeof(int));
+        for(i = 0; i < ySubvector.vectorLen; i++)
+        {
+            ySubvector.vector[i] = ySubvectors[0].vector[i];
+        }
+    }
+    else if(rowIdx == 0)
+    {
+        ySubvector = recvSubvector(ROOT_NODE, columns);
+    }
+
     
     // Clean up
     deallocSubvector(subvectors, vectorCount);
     free(subvector.vector);
+    deallocSubvector(ySubvectors, yVectorCount);
+    free(ySubvector.vector);
     fflush(stdout);
     MPI_Finalize();
     return 0;
