@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <mpi.h>
 
@@ -39,12 +40,21 @@
 enum MessageTags
 {
     TAG_VECTOR_LEN,
-    TAV_VECTOR_DATA,
+    TAG_VECTOR_DATA,
+};
+
+struct Subvector
+{
+    int vectorLen,
+      * vector;
 };
 
 int randPopVector(int * vector, int vectorLen)
 {
     int i;
+
+    srand(time(NULL));
+
     for(i = 0; i < vectorLen; i++)
     {
         vector[i] = (rand() % UPPER_LIM) + 1;
@@ -66,13 +76,24 @@ void printVector(int * vector, int vectorLen)
     }
 }
 
-int calculateStride(int rank, int m, int p)
+void printSubvector(struct Subvector * subvector)
+{
+    int i;
+    printf("[ ");
+    for(i = 0; i < subvector->vectorLen; i++)
+    {
+        printf("%d ", subvector->vector[i]);
+    }
+    printf("]\n");
+}
+
+int calcStride(int vectorLen, int divisions, int rank)
 {
     int stride,
         extra;
-
-    stride = m / p;
-    extra  = m % p;
+    
+    stride = vectorLen / divisions;
+    extra  = vectorLen % divisions;
 
     if(rank < extra)
     {
@@ -82,19 +103,65 @@ int calculateStride(int rank, int m, int p)
     return stride;
 }
 
-int calculateOffset(int rank, int * strides)
+void deallocSubvector(struct Subvector * subvectors, int vectorCount)
 {
-    int i, offset;
-    offset = 0;
+    int i;
 
-    for(i = 0; i < rank; i++)
+    if(subvectors != NULL)
     {
-        offset += strides[i];
+        for(i = 0; i < vectorCount; i++)
+        {
+            free(subvectors[i].vector);
+        }
+        free(subvectors);
     }
-
-    return offset;
 }
 
+struct Subvector * linearDistribute(int * vector, int vectorLen, MPI_Comm comm, int * vectorCount)
+{
+    // Function variables
+    int stride, i, iVector, j;
+    struct Subvector * subvectors;
+
+    // Prepare function variables
+    MPI_Comm_size(comm, vectorCount);
+    subvectors = calloc(*vectorCount, sizeof(struct Subvector));
+
+    for(i = 0, iVector = 0; i < *vectorCount; i++)
+    {
+        subvectors[i].vectorLen = calcStride(M, P, i);
+        subvectors[i].vector = calloc(subvectors[i].vectorLen, sizeof(int));
+        for(j = 0; j < subvectors[i].vectorLen; j++, iVector++)
+        {
+            subvectors[i].vector[j] = vector[iVector];
+        }
+    }
+
+    return subvectors;
+}
+
+void sendSubvectors(struct Subvector * subvectors, int vectorCount, MPI_Comm comm)
+{
+    int i;
+    // Assume root sender is rank 0
+    for(i = 1; i < vectorCount; i++)
+    {
+        // Use blocking sends because I'm lazy
+        MPI_Send(&subvectors[i].vectorLen, 1, MPI_INT, i, TAG_VECTOR_LEN, comm);
+        MPI_Send(subvectors[i].vector, subvectors[i].vectorLen, MPI_INT, i, TAG_VECTOR_DATA, comm);
+    }
+}
+
+struct Subvector recvSubvector(int root, MPI_Comm comm)
+{
+    struct Subvector subvector;
+
+    MPI_Recv(&subvector.vectorLen, 1, MPI_INT, 0, TAG_VECTOR_LEN, comm, MPI_STATUS_IGNORE);
+    subvector.vector = calloc(subvector.vectorLen, sizeof(int));
+    MPI_Recv(subvector.vector, subvector.vectorLen, MPI_INT, 0, TAG_VECTOR_DATA, comm, MPI_STATUS_IGNORE);
+
+    return subvector;
+}
 
 
 int main(int argc, char ** argv)
@@ -114,64 +181,38 @@ int main(int argc, char ** argv)
     }
 
     // Create row and column groups
-    int rowRank, colRank,
+    int rowIdx, colIdx,
         rowCount, colCount;
     MPI_Comm columns, rows;
     MPI_Comm_split(MPI_COMM_WORLD, rank / Q, rank, &columns);
-    MPI_Comm_rank(columns, &colRank);
-    MPI_Comm_size(columns, &colCount);
-    MPI_Comm_split(MPI_COMM_WORLD, rank / P, rank, &rows);
-    MPI_Comm_rank(rows, &rowRank);
-    MPI_Comm_size(rows, &rowCount);
+    MPI_Comm_rank(columns, &colIdx);
+    MPI_Comm_split(MPI_COMM_WORLD, rank % Q, rank, &rows);
+    MPI_Comm_rank(rows, &rowIdx);
+
+    // Distribute subvectors to other processes
+    int vectorCount, i;
+    struct Subvector * subvectors,
+                       subvector;
     if(rank == ROOT_NODE)
     {
-        DBGPRINT("Row Count (%d) || Col Count (%d)", rowCount, colCount)
+        subvectors = linearDistribute(vector, M, rows, &vectorCount);
+        sendSubvectors(subvectors, vectorCount, rows);
+        // Copy vector with index 0 to root node
+        subvector.vectorLen = subvectors[0].vectorLen;
+        subvector.vector = calloc(subvector.vectorLen, sizeof(int));
+        for(i = 0; i < subvector.vectorLen; i++)
+        {
+            subvector.vector[i] = subvectors[0].vector[i];
+        }
     }
-
-    // Distribute vector to row groups
-    int i,
-        * strides,
-        * offsets,
-        * subvector;
-    strides = NULL;
-    offsets = NULL;
-    subvector = NULL;
-    // Allocate memory for strides and offsets
-    strides = calloc(rowCount, sizeof(int));
-    offsets = calloc(rowCount, sizeof(int));
-    // Calculate how to distribute vector
-    for(i = 0; i < rowCount; i++)
+    else if(colIdx == 0)
     {
-        strides[i] = calculateStride(i, M, rowCount);
+        subvector = recvSubvector(ROOT_NODE, rows);
     }
-    for(i = 0; i < rowCount; i++)
-    {
-        offsets[i] = calculateOffset(i, strides);
-    }
-    // Distribute vector as subvector
-    subvector = calloc(strides[rowRank], sizeof(int));
-    if(colRank != ROOT_NODE)
-    {
-        printVector(subvector, strides[rowRank]);
-    }
-    MPI_Scatterv(vector,
-                 strides,
-                 offsets,
-                 MPI_INT,
-                 subvector,
-                 strides[rowRank],
-                 MPI_INT,
-                 ROOT_NODE,
-                 rows);
-
-    // Broadcast vector to row group
-    MPI_Bcast(subvector, strides[rowRank], MPI_INT, ROOT_NODE, columns);
-    //printVector(subvector, strides[rowRank]);
-
+    
     // Clean up
-    free(strides);
-    free(offsets);
-    free(subvector);
+    deallocSubvector(subvectors, vectorCount);
+    free(subvector.vector);
     fflush(stdout);
     MPI_Finalize();
     return 0;
