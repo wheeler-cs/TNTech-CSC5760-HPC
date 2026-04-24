@@ -189,7 +189,7 @@ int main(int argc, char ** argv)
     MPI_Comm_split(MPI_COMM_WORLD, rank % Q, rank, &rows);
     MPI_Comm_rank(rows, &rowIdx);
 
-    // Distribute subvectors to other processes
+    // Linearly distribute vector in column
     int vectorCount, i;
     struct Subvector * subvectors,
                        subvector;
@@ -209,6 +209,15 @@ int main(int argc, char ** argv)
     {
         subvector = recvSubvector(ROOT_NODE, rows);
     }
+
+    // Copy vector across row
+    MPI_Bcast(&subvector.vectorLen, 1, MPI_INT, 0, columns);
+    if(colIdx != 0)
+    {
+        subvector.vector = calloc(subvector.vectorLen, sizeof(int));
+    }
+    MPI_Bcast(subvector.vector, subvector.vectorLen, MPI_INT, 0, columns);
+    printSubvector(&subvector);
     
     // Clean up
     deallocSubvector(subvectors, vectorCount);
