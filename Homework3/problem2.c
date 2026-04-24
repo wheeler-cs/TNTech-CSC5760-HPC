@@ -14,10 +14,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <mpi.h>
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define DBGPRINT(...) \
@@ -115,7 +116,7 @@ void deallocSubvector(struct Subvector * subvectors, int vectorCount)
     }
 }
 
-struct Subvector * linearDistribute(int * vector, int vectorLen, MPI_Comm comm, int * vectorCount)
+struct Subvector * linearDistribute(int * vector, int vectorLen, int divisor, MPI_Comm comm, int * vectorCount)
 {
     // Function variables
     int stride, i, iVector, j;
@@ -123,11 +124,12 @@ struct Subvector * linearDistribute(int * vector, int vectorLen, MPI_Comm comm, 
 
     // Prepare function variables
     MPI_Comm_size(comm, vectorCount);
+    DBGPRINT("Communicator Size: %d", *vectorCount)
     subvectors = calloc(*vectorCount, sizeof(struct Subvector));
 
     for(i = 0, iVector = 0; i < *vectorCount; i++)
     {
-        subvectors[i].vectorLen = calcStride(M, P, i);
+        subvectors[i].vectorLen = calcStride(M, divisor, i);
         subvectors[i].vector = calloc(subvectors[i].vectorLen, sizeof(int));
         for(j = 0; j < subvectors[i].vectorLen; j++, iVector++)
         {
@@ -144,7 +146,7 @@ void sendSubvectors(struct Subvector * subvectors, int vectorCount, MPI_Comm com
     // Assume root sender is rank 0
     for(i = 1; i < vectorCount; i++)
     {
-        // Use blocking sends because I'm lazy
+        // Use blocking sends because I'm lazy, Scatterv could work here too
         MPI_Send(&subvectors[i].vectorLen, 1, MPI_INT, i, TAG_VECTOR_LEN, comm);
         MPI_Send(subvectors[i].vector, subvectors[i].vectorLen, MPI_INT, i, TAG_VECTOR_DATA, comm);
     }
@@ -193,7 +195,7 @@ int main(int argc, char ** argv)
                        subvector;
     if(rank == ROOT_NODE)
     {
-        subvectors = linearDistribute(vector, M, rows, &vectorCount);
+        subvectors = linearDistribute(vector, M, P, rows, &vectorCount);
         sendSubvectors(subvectors, vectorCount, rows);
         // Copy vector with index 0 to root node
         subvector.vectorLen = subvectors[0].vectorLen;
@@ -219,6 +221,10 @@ int main(int argc, char ** argv)
     printSubvector(&subvector);
 #endif
 
+    // Wait for all operations to complete before moving on
+    fflush(stdout);
+    sleep(1);
+
     // Prepare variables for vertical distribution
     int yVectorCount,
         yVector[M];
@@ -231,7 +237,7 @@ int main(int argc, char ** argv)
         randPopVector(yVector, M);
         printf("Input vertical vector: ");
         printVector(yVector, M);
-        ySubvectors = linearDistribute(yVector, M, columns, &yVectorCount);
+        ySubvectors = linearDistribute(yVector, M, Q, columns, &yVectorCount);
         sendSubvectors(ySubvectors, yVectorCount, columns);
         // Copy vector with index 0 to root node
         ySubvector.vectorLen = ySubvectors[0].vectorLen;
@@ -245,6 +251,17 @@ int main(int argc, char ** argv)
     {
         ySubvector = recvSubvector(ROOT_NODE, columns);
     }
+
+    // Copy vector across row
+    MPI_Bcast(&ySubvector.vectorLen, 1, MPI_INT, 0, rows);
+    if(rowIdx != 0)
+    {
+        ySubvector.vector = calloc(ySubvector.vectorLen, sizeof(int));
+    }
+    MPI_Bcast(ySubvector.vector, ySubvector.vectorLen, MPI_INT, 0, rows);
+#ifndef DEBUG
+    printSubvector(&ySubvector);
+#endif
 
     
     // Clean up
