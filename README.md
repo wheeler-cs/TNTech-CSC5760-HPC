@@ -8,4 +8,5 @@ that outlines how the source code files are structured.
 <ul>
     <li><a href="./Homework1/">Homework 1</a></li>
     <li><a href="./Homework2/">Homework 2</a></li>
+    <li><a href="./Homework3/">Homework 3</a></li>
 </ul>

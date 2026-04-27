@@ -16,6 +16,9 @@ target_link_libraries(problem1 MPI::MPI_C)
 add_executable(problem2 problem2.c)
 target_link_libraries(problem2 MPI::MPI_C)
 
+add_executable(problem3 problem3.c)
+target_link_libraries(problem3 MPI::MPI_C)
+
 add_executable(problem4 problem4.cu)
 set_target_properties(problem4 PROPERTIES
                       CUDA_STANDARD 17
