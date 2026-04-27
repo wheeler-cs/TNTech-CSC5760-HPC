@@ -299,27 +299,22 @@ int main(int argc, char ** argv)
 
     // Reassimilate sums across row
     int fullDotProduct;
-    MPI_Reduce(&dotProduct,
-               &fullDotProduct,
-               1,
-               MPI_INT,
-               MPI_SUM,
-               ROOT_NODE,
-               columns);
+    MPI_Allreduce(&dotProduct,
+                  &fullDotProduct,
+                  1,
+                  MPI_INT,
+                  MPI_SUM,
+                  columns);
 
     // Reassimilate sums across column
-    MPI_Reduce(&fullDotProduct,
-               &dotProduct,
-               1,
-               MPI_INT,
-               MPI_SUM,
-               ROOT_NODE,
-               rows);
+    MPI_Allreduce(&fullDotProduct,
+                  &dotProduct,
+                  1,
+                  MPI_INT,
+                  MPI_SUM,
+                  rows);
 
-    if(rank == ROOT_NODE)
-    {
-        printf("Final Sum: %d\n", dotProduct);
-    }
+    printf("Final Sum: %d\n", dotProduct);
     
     // Clean up
     deallocSubvector(subvectors, vectorCount);
