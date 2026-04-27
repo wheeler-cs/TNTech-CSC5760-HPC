@@ -27,4 +27,7 @@ set_target_properties(problem4 PROPERTIES
 
 add_executable(problem5 problem5.c)
 
+add_executable(problem6 problem6.c)
+target_link_libraries(problem6 MPI::MPI_C)
+
 # === Graduate Problems ===
