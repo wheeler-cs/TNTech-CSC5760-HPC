@@ -1,9 +1,15 @@
 /**
- * Using the results of Problem #1 and #3 to compute the dot product of two
- * distinct vectors of length M, one stored initially horizontally in linear
- * load-balanced distribution, and one stored initially vertically in linear
- * load-balanced distribution. The scalar result should be in all processes at
- * the end of the computation. 
+ * 1. Modify the exercise with one stored in linear load-balanced distribution,
+ * and the other in the scatter distribution.
+ * 
+ * 2. Compute the Matrix-vector product of an M × N matrix A stored on the P × Q
+ * grid with linear load-balanced rows and columns with a vector of length N
+ * stored horizontally over the same process topology. Explain the distribution
+ * of your output vector y := Ax; is it in a horizontal or vertical
+ * distribution?
+ * 
+ * Vertical distribution, as the vector is partitioned across dimension
+ * P (rows).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -267,7 +273,7 @@ int main(int argc, char ** argv)
         randPopVector(yVector, M);
         printf("Input vertical vector: ");
         printVector(yVector, M);
-        ySubvectors = linearDistribute(yVector, M, Q, columns, &yVectorCount);
+        ySubvectors = scatterDistribute(yVector, M, Q, columns, &yVectorCount);
         sendSubvectors(ySubvectors, yVectorCount, columns);
         // Copy vector with index 0 to root node
         ySubvector.vectorLen = ySubvectors[0].vectorLen;

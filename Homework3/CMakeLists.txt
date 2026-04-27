@@ -1,7 +1,15 @@
 cmake_minimum_required(VERSION 3.22)
-project(Homework3 LANGUAGES C CUDA)
+project(Homework3 LANGUAGES C CXX CUDA)
 
 # === Library Imports ===
+
+include(FetchContent)
+FetchContent_Declare(
+  Kokkos
+  URL https://github.com/kokkos/kokkos/archive/refs/tags/5.0.0.zip
+)
+set(Kokkos_ENABLE_OPENMP ON)
+FetchContent_MakeAvailable(Kokkos)
 
 find_package(MPI REQUIRED)
 
@@ -31,3 +39,6 @@ add_executable(problem6 problem6.c)
 target_link_libraries(problem6 MPI::MPI_C)
 
 # === Graduate Problems ===
+
+add_executable(problemg2 problemg2.cpp problemg2main.cpp Terminal.c)
+target_link_libraries(problemg2 MPI::MPI_CXX Kokkos::kokkos)
